@@ -8,12 +8,14 @@ const { protect } = require("../middleware/auth");
 const router = express.Router();
 
 const genBookingCode = () => "SP-" + crypto.randomBytes(4).toString("hex").toUpperCase();
+const normalizeVehicleNumber = (value) => (typeof value === "string" ? value.trim().toUpperCase() : "");
 
 // @route POST /api/bookings  (create a time-based booking)
 router.post("/", protect, async (req, res) => {
   try {
     const { slotId, date, startTime, endTime, vehicleNumber } = req.body;
-    if (!slotId || !date || !startTime || !endTime || !vehicleNumber) {
+    const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
+    if (!slotId || !date || !startTime || !endTime || !normalizedVehicleNumber) {
       return res.status(400).json({ message: "All fields are required" });
     }
     if (startTime >= endTime) {
@@ -41,7 +43,7 @@ router.post("/", protect, async (req, res) => {
       date,
       startTime,
       endTime,
-      vehicleNumber,
+      vehicleNumber: normalizedVehicleNumber,
       status: "confirmed",
       bookingCode: genBookingCode(),
     });

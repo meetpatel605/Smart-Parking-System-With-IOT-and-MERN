@@ -67,8 +67,8 @@ const Navbar = () => {
             <button onClick={handleLogout} className="btn-danger text-sm w-fit">Logout</button>
           ) : (
             <div className="flex gap-2">
-              <Link to="/login" className="btn-secondary text-sm">Login</Link>
-              <Link to="/register" className="btn-primary text-sm">Register</Link>
+              <Link to="/login" onClick={() => setOpen(false)} className="btn-secondary text-sm">Login</Link>
+              <Link to="/register" onClick={() => setOpen(false)} className="btn-primary text-sm">Register</Link>
             </div>
           )}
         </div>

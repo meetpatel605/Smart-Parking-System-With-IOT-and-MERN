@@ -97,7 +97,13 @@ const Parking = () => {
               ))}
             </select>
           ) : (
-            <input className="input" required value={form.vehicleNumber} onChange={(e) => setForm({ ...form, vehicleNumber: e.target.value })} />
+            <input
+              className="input"
+              required
+              placeholder="Enter vehicle number (e.g., GJ01AB1234)"
+              value={form.vehicleNumber}
+              onChange={(e) => setForm({ ...form, vehicleNumber: e.target.value.toUpperCase() })}
+            />
           )}
         </div>
         <button className="btn-primary h-fit" disabled={searching}>

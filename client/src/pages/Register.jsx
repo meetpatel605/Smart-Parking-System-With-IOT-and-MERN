@@ -44,6 +44,10 @@ const Register = () => {
     setForm({ ...form, mobile: value });
   };
 
+  const handleVehicleNumberChange = (e) => {
+    setForm({ ...form, vehicleNumber: e.target.value.toUpperCase() });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -77,12 +81,12 @@ const Register = () => {
 
         <div>
           <label className="label">Full Name</label>
-          <input className="input" required value={form.fullName} onChange={set("fullName")} />
+          <input className="input" required placeholder="Enter your full name" value={form.fullName} onChange={set("fullName")} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Email</label>
-            <input type="email" className="input" required value={form.email} onChange={set("email")} />
+            <input type="email" className="input" required placeholder="Enter your email" value={form.email} onChange={set("email")} />
           </div>
           <div>
             <label className="label">Mobile Number</label>
@@ -100,16 +104,16 @@ const Register = () => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Password</label>
-            <input type="password" className="input" required value={form.password} onChange={set("password")} />
+            <input type="password" className="input" required placeholder="Enter password" value={form.password} onChange={set("password")} />
           </div>
           <div>
             <label className="label">Confirm Password</label>
-            <input type="password" className="input" required value={form.confirmPassword} onChange={set("confirmPassword")} />
+            <input type="password" className="input" required placeholder="Re-enter password" value={form.confirmPassword} onChange={set("confirmPassword")} />
           </div>
         </div>
         <div>
           <label className="label">Vehicle Number</label>
-          <input className="input" placeholder="GJ01AB1234" value={form.vehicleNumber} onChange={set("vehicleNumber")} />
+          <input className="input" placeholder="Enter vehicle number (e.g. GJ01AB1234)" value={form.vehicleNumber} onChange={handleVehicleNumberChange} />
         </div>
 
         <button className="btn-primary w-full" disabled={loading}>

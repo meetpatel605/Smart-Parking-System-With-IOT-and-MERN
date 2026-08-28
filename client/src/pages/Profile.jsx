@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 
+const MAX_VEHICLES_PER_USER = 10;
+
 const Profile = () => {
   const { user, updateUser } = useAuth();
   const initialVehicles = (user?.vehicles && user.vehicles.length > 0)
@@ -73,7 +75,7 @@ const Profile = () => {
             {form.vehicles.map((v, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input className="col-span-5 input" placeholder="GJ01AB1234" value={v.number} onChange={(e) => {
-                  const nv = [...form.vehicles]; nv[i].number = e.target.value; setForm({ ...form, vehicles: nv });
+                  const nv = [...form.vehicles]; nv[i].number = e.target.value.toUpperCase(); setForm({ ...form, vehicles: nv });
                 }} />
                 <select className="col-span-4 input" value={v.type} onChange={(e) => {
                   const nv = [...form.vehicles]; nv[i].type = e.target.value; setForm({ ...form, vehicles: nv });
@@ -91,9 +93,17 @@ const Profile = () => {
               </div>
             ))}
             <div>
-              <button type="button" className="btn-secondary" onClick={() => setForm({ ...form, vehicles: [...form.vehicles, { number: "", type: "4-wheeler", label: "" }] })}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={form.vehicles.length >= MAX_VEHICLES_PER_USER}
+                onClick={() => setForm({ ...form, vehicles: [...form.vehicles, { number: "", type: "4-wheeler", label: "" }] })}
+              >
                 Add Vehicle
               </button>
+              <p className="text-xs text-slate-400 mt-2">
+                Maximum {MAX_VEHICLES_PER_USER} vehicles allowed per user.
+              </p>
             </div>
           </div>
         </div>

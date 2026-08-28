@@ -36,6 +36,7 @@ const Login = () => {
             type="email"
             className="input"
             required
+            placeholder="Enter your email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
@@ -46,6 +47,7 @@ const Login = () => {
             type="password"
             className="input"
             required
+            placeholder="Enter your password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />

@@ -6,6 +6,12 @@ const { protect } = require("../middleware/auth");
 const { generateQrDataUrl, sendMailWithQr } = require("../utils/mailer");
 
 const router = express.Router();
+const MAX_VEHICLES_PER_USER = 10;
+
+const normalizeVehicleNumber = (value) => {
+  if (typeof value !== "string") return "";
+  return value.trim().toUpperCase();
+};
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -16,6 +22,7 @@ const signToken = (id) =>
 router.post("/register", async (req, res) => {
   try {
     const { fullName, email, mobile, password, userType, vehicleNumber, vehicleType, rfidCardId } = req.body;
+    const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
 
     if (!fullName || !email || !mobile || !password) {
       return res.status(400).json({ message: "Please fill all required fields" });
@@ -27,11 +34,11 @@ router.post("/register", async (req, res) => {
     // prepare initial vehicles array with a QR token for the vehicle (if provided)
     const vehicles = [];
     let qrDataUrl = null;
-    if (vehicleNumber) {
+    if (normalizedVehicleNumber) {
       const qrToken = crypto.randomBytes(8).toString("hex");
-      const payload = JSON.stringify({ t: qrToken, u: "new", v: vehicleNumber });
+      const payload = JSON.stringify({ t: qrToken, u: "new", v: normalizedVehicleNumber });
       qrDataUrl = await generateQrDataUrl(payload);
-      vehicles.push({ number: vehicleNumber, type: vehicleType || "4-wheeler", qrToken, qrIssuedAt: new Date() });
+      vehicles.push({ number: normalizedVehicleNumber, type: vehicleType || "4-wheeler", qrToken, qrIssuedAt: new Date() });
     }
 
     const user = await User.create({
@@ -40,7 +47,7 @@ router.post("/register", async (req, res) => {
       mobile,
       password,
       userType: userType === "faculty" ? "faculty" : "student",
-      vehicleNumber: vehicleNumber || "",
+      vehicleNumber: normalizedVehicleNumber || "",
       vehicleType: vehicleType || "4-wheeler",
       rfidCardId: rfidCardId || null,
       vehicles,
@@ -93,27 +100,41 @@ router.put("/profile", protect, async (req, res) => {
   try {
     const { fullName, mobile, vehicleNumber, vehicleType, rfidCardId, profilePhoto, vehicles } = req.body;
     const user = req.user;
+    const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
     if (fullName) user.fullName = fullName;
     if (mobile) user.mobile = mobile;
-    if (vehicleNumber !== undefined) user.vehicleNumber = vehicleNumber;
+    if (vehicleNumber !== undefined) user.vehicleNumber = normalizedVehicleNumber;
     if (vehicleType) user.vehicleType = vehicleType;
     if (rfidCardId !== undefined) user.rfidCardId = rfidCardId || null;
     if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
 
     // update vehicles list if provided (expect array of { number, type, label })
     if (Array.isArray(vehicles)) {
+      if (vehicles.length > MAX_VEHICLES_PER_USER) {
+        return res.status(400).json({ message: `You can add a maximum of ${MAX_VEHICLES_PER_USER} vehicles.` });
+      }
+
       // merge: preserve existing qrToken when vehicle matches by number, otherwise generate a new token
       const existing = user.vehicles || [];
       const updated = [];
+      const seenVehicleNumbers = new Set();
       for (const v of vehicles) {
-        if (!v || !v.number) continue;
-        const found = existing.find((e) => e.number === v.number);
+        const normalizedNumber = normalizeVehicleNumber(v?.number);
+        if (!normalizedNumber) continue;
+        if (seenVehicleNumbers.has(normalizedNumber)) {
+          return res.status(400).json({ message: `Vehicle number ${normalizedNumber} is already added. Please enter a different number.` });
+        }
+        seenVehicleNumbers.add(normalizedNumber);
+        const found = existing.find((e) => normalizeVehicleNumber(e.number) === normalizedNumber);
         if (found) {
-          updated.push({ ...found.toObject ? found.toObject() : found, number: v.number, type: v.type || found.type, label: v.label || found.label });
+          updated.push({ ...found.toObject ? found.toObject() : found, number: normalizedNumber, type: v.type || found.type, label: v.label || found.label });
         } else {
           const qrToken = crypto.randomBytes(8).toString("hex");
-          updated.push({ number: v.number, type: v.type || "4-wheeler", label: v.label || "", qrToken, qrIssuedAt: new Date() });
+          updated.push({ number: normalizedNumber, type: v.type || "4-wheeler", label: v.label || "", qrToken, qrIssuedAt: new Date() });
         }
+      }
+      if (updated.length > MAX_VEHICLES_PER_USER) {
+        return res.status(400).json({ message: `You can add a maximum of ${MAX_VEHICLES_PER_USER} vehicles.` });
       }
       user.vehicles = updated;
       // keep backward compatibility fields in sync with first vehicle

@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
+const normalizeVehicleNumber = (value) => {
+  if (typeof value !== "string") return "";
+  return value.trim().toUpperCase();
+};
+
 const userSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true, trim: true },
@@ -8,13 +13,13 @@ const userSchema = new mongoose.Schema(
     mobile: { type: String, required: true },
     password: { type: String, required: true, minlength: 6 },
     userType: { type: String, enum: ["student", "faculty", "admin"], default: "student" },
-    vehicleNumber: { type: String, default: "" },
+    vehicleNumber: { type: String, default: "", set: normalizeVehicleNumber },
     vehicleType: { type: String, enum: ["2-wheeler", "4-wheeler", "other"], default: "4-wheeler" },
     rfidCardId: { type: String, default: null, unique: true, sparse: true },
     // support multiple vehicles per user
     vehicles: [
       {
-        number: { type: String, required: true },
+        number: { type: String, required: true, set: normalizeVehicleNumber },
         type: { type: String, enum: ["2-wheeler", "4-wheeler", "other"], default: "4-wheeler" },
         label: { type: String, default: "" },
         qrToken: { type: String, default: null },
