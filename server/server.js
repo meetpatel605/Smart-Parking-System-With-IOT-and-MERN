@@ -4,6 +4,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
+const ensureDemoSlots = require("./utils/ensureDemoSlots");
 
 const authRoutes = require("./routes/auth");
 const slotRoutes = require("./routes/slots");
@@ -13,7 +14,12 @@ const adminRoutes = require("./routes/admin");
 
 const app = express();
 
-connectDB();
+connectDB()
+  .then(ensureDemoSlots)
+  .catch((err) => {
+    console.error("Demo parking slot setup failed:", err.message);
+    process.exit(1);
+  });
 
 app.use(helmet());
 
