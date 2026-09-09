@@ -24,28 +24,32 @@ const run = async () => {
     console.log("ℹ️ Admin already exists:", adminEmail);
   }
 
-  // --- Demo parking slots ---
-  const existingCount = await ParkingSlot.countDocuments();
-  if (existingCount === 0) {
-    const zones = ["A", "B", "C"];
-    const slots = [];
-    zones.forEach((zone) => {
-      for (let i = 1; i <= 6; i++) {
-        slots.push({
-          slotNumber: `${zone}${i}`,
-          zone,
-          nearestGate: zone === "A" ? "Main Gate" : zone === "B" ? "East Gate" : "West Gate",
-          chargingAvailable: i % 4 === 0,
-          covered: i % 3 === 0,
-          category: i === 1 ? "disabled" : i % 5 === 0 ? "ev" : "general",
-          status: "available",
-        });
-      }
-    });
-    await ParkingSlot.insertMany(slots);
-    console.log(`✅ ${slots.length} demo parking slots created`);
+  // --- Demo parking slots (30 total: A1-A7, B1-B7, C1-C6, D1-D4, E1-E6) ---
+  const desiredSlots = [];
+  const zoneCounts = { A: 7, B: 7, C: 6, D: 4, E: 6 };
+  Object.entries(zoneCounts).forEach(([zone, count]) => {
+    for (let i = 1; i <= count; i++) {
+      desiredSlots.push({
+        slotNumber: `${zone}${i}`,
+        zone,
+        nearestGate: zone === "A" ? "Main Gate" : zone === "B" ? "East Gate" : zone === "C" ? "West Gate" : "North Gate",
+        chargingAvailable: i % 4 === 0,
+        covered: i % 3 === 0,
+        category: i === 1 ? "disabled" : i % 5 === 0 ? "ev" : "general",
+        status: "available",
+      });
+    }
+  });
+
+  const existingSlotNumbers = new Set(
+    (await ParkingSlot.find({}, { slotNumber: 1 })).map((slot) => slot.slotNumber)
+  );
+  const missingSlots = desiredSlots.filter((slot) => !existingSlotNumbers.has(slot.slotNumber));
+  if (missingSlots.length > 0) {
+    await ParkingSlot.insertMany(missingSlots);
+    console.log(`✅ ${missingSlots.length} missing demo parking slot(s) created`);
   } else {
-    console.log("ℹ️ Parking slots already exist, skipping seed");
+    console.log("ℹ️ All 30 demo parking slots already exist");
   }
 
   console.log("🌱 Seeding complete");
