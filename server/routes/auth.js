@@ -49,7 +49,7 @@ router.post("/register", async (req, res) => {
       userType: userType === "faculty" ? "faculty" : "student",
       vehicleNumber: normalizedVehicleNumber || "",
       vehicleType: vehicleType || "4-wheeler",
-      rfidCardId: rfidCardId || null,
+      ...(rfidCardId?.trim() ? { rfidCardId: rfidCardId.trim() } : {}),
       vehicles,
     });
 
@@ -105,7 +105,10 @@ router.put("/profile", protect, async (req, res) => {
     if (mobile) user.mobile = mobile;
     if (vehicleNumber !== undefined) user.vehicleNumber = normalizedVehicleNumber;
     if (vehicleType) user.vehicleType = vehicleType;
-    if (rfidCardId !== undefined) user.rfidCardId = rfidCardId || null;
+    if (rfidCardId !== undefined) {
+      const normalizedRfid = typeof rfidCardId === "string" ? rfidCardId.trim() : "";
+      user.rfidCardId = normalizedRfid || undefined;
+    }
     if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
 
     // update vehicles list if provided (expect array of { number, type, label })

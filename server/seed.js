@@ -19,9 +19,9 @@ const run = async () => {
       password: adminPassword,
       userType: "admin",
     });
-    console.log(`✅ Admin created -> email: ${adminEmail}  password: ${adminPassword}`);
+    console.log(`Admin created -> email: ${adminEmail}  password: ${adminPassword}`);
   } else {
-    console.log("ℹ️ Admin already exists:", adminEmail);
+    console.log("ℹAdmin already exists:", adminEmail);
   }
 
   // --- Demo parking slots (30 total: A1-A7, B1-B7, C1-C6, D1-D4, E1-E6) ---

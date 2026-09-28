@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema(
     userType: { type: String, enum: ["student", "faculty", "admin"], default: "student" },
     vehicleNumber: { type: String, default: "", set: normalizeVehicleNumber },
     vehicleType: { type: String, enum: ["2-wheeler", "4-wheeler", "other"], default: "4-wheeler" },
-    rfidCardId: { type: String, default: null, unique: true, sparse: true },
+    rfidCardId: { type: String, default: undefined },
     // support multiple vehicles per user
     vehicles: [
       {
@@ -32,6 +32,11 @@ const userSchema = new mongoose.Schema(
     resetOtpExpires: { type: Date, default: null },
   },
   { timestamps: true }
+);
+
+userSchema.index(
+  { rfidCardId: 1 },
+  { unique: true, partialFilterExpression: { rfidCardId: { $type: "string" } } }
 );
 
 userSchema.pre("save", async function (next) {

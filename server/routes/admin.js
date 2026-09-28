@@ -60,6 +60,9 @@ router.put("/users/:id", async (req, res) => {
     allowed.forEach((key) => {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     });
+    if (updates.rfidCardId !== undefined) {
+      updates.rfidCardId = typeof updates.rfidCardId === "string" ? updates.rfidCardId.trim() || undefined : undefined;
+    }
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select("-password");
     res.json({ user });
   } catch (err) {
