@@ -7,7 +7,9 @@ const connectDB = async () => {
       process.env.MONGO_URI ||
       "mongodb://127.0.0.1:27017/smart_parking";
 
-    const conn = await mongoose.connect(uri);
+    const conn = await mongoose.connect(uri, {
+      dbName: process.env.MONGO_DB_NAME || "smart_parking",
+    });
 
     const indexes = await User.collection.indexes();
     const rfidIndex = indexes.find((index) => index.name === "rfidCardId_1");
