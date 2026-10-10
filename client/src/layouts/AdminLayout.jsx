@@ -46,7 +46,7 @@ const AdminLayout = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:sticky top-0 h-screen z-50 flex flex-col bg-[#0b1424]/95 backdrop-blur-xl border-r border-base-border transition-all duration-300
+        className={`fixed lg:sticky top-0 h-screen z-50 flex flex-col bg-base-card/95 backdrop-blur-xl border-r border-base-border transition-all duration-300
         ${collapsed ? "lg:w-[76px]" : "lg:w-64"}
         ${mobileOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0 w-64"}`}
       >

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const [open, setOpen] = useState(false);
 
   const handleLogout = () => {
@@ -53,6 +55,15 @@ const Navbar = () => {
               <Link to="/register" className="btn-primary text-sm">Register</Link>
             </div>
           )}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="text-sm text-muted hover:text-primary transition-colors"
+            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
+            title={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
+          >
+            {theme === "light" ? "☾ Dark" : "☀ Light"}
+          </button>
         </div>
       </div>
 
@@ -71,6 +82,14 @@ const Navbar = () => {
               <Link to="/register" onClick={() => setOpen(false)} className="btn-primary text-sm">Register</Link>
             </div>
           )}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="text-left text-sm text-muted hover:text-primary transition-colors"
+            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
+          >
+            {theme === "light" ? "☾ Dark theme" : "☀ Light theme"}
+          </button>
         </div>
       )}
     </nav>

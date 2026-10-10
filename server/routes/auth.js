@@ -21,11 +21,15 @@ const signToken = (id) =>
 // @route POST /api/auth/register
 router.post("/register", async (req, res) => {
   try {
-    const { fullName, email, mobile, password, userType, vehicleNumber, vehicleType, rfidCardId } = req.body;
+    const { fullName, email, mobile, address, aadhaarNumber, password, userType, vehicleNumber, vehicleType, rfidCardId } = req.body;
     const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
+    const normalizedAadhaar = typeof aadhaarNumber === "string" ? aadhaarNumber.replace(/\D/g, "") : "";
 
-    if (!fullName || !email || !mobile || !password) {
+    if (!fullName || !email || !mobile || !address || !normalizedAadhaar || !password) {
       return res.status(400).json({ message: "Please fill all required fields" });
+    }
+    if (normalizedAadhaar.length !== 12) {
+      return res.status(400).json({ message: "Aadhaar number must contain exactly 12 digits" });
     }
 
     const existing = await User.findOne({ email: email.toLowerCase() });
@@ -45,6 +49,8 @@ router.post("/register", async (req, res) => {
       fullName,
       email,
       mobile,
+      address,
+      aadhaarNumber: normalizedAadhaar,
       password,
       userType: userType === "faculty" ? "faculty" : "student",
       vehicleNumber: normalizedVehicleNumber || "",
@@ -98,11 +104,19 @@ router.get("/me", protect, async (req, res) => {
 // @route PUT /api/auth/profile
 router.put("/profile", protect, async (req, res) => {
   try {
-    const { fullName, mobile, vehicleNumber, vehicleType, rfidCardId, profilePhoto, vehicles } = req.body;
+    const { fullName, mobile, address, aadhaarNumber, vehicleNumber, vehicleType, rfidCardId, profilePhoto, vehicles } = req.body;
     const user = req.user;
     const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
     if (fullName) user.fullName = fullName;
     if (mobile) user.mobile = mobile;
+    if (address !== undefined) user.address = address.trim();
+    if (aadhaarNumber !== undefined) {
+      const normalizedAadhaar = typeof aadhaarNumber === "string" ? aadhaarNumber.replace(/\D/g, "") : "";
+      if (normalizedAadhaar.length !== 12) {
+        return res.status(400).json({ message: "Aadhaar number must contain exactly 12 digits" });
+      }
+      user.aadhaarNumber = normalizedAadhaar;
+    }
     if (vehicleNumber !== undefined) user.vehicleNumber = normalizedVehicleNumber;
     if (vehicleType) user.vehicleType = vehicleType;
     if (rfidCardId !== undefined) {

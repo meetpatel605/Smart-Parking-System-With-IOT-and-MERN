@@ -13,6 +13,8 @@ const Profile = () => {
   const [form, setForm] = useState({
     fullName: user?.fullName || "",
     mobile: user?.mobile || "",
+    address: user?.address || "",
+    aadhaarNumber: user?.aadhaarNumber || "",
     vehicles: initialVehicles,
     rfidCardId: user?.rfidCardId || "",
   });
@@ -68,6 +70,21 @@ const Profile = () => {
         <div>
           <label className="label">Mobile</label>
           <input className="input" value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Address</label>
+          <textarea className="input min-h-24 resize-y" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Aadhaar Card Number</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            className="input"
+            maxLength="12"
+            value={form.aadhaarNumber}
+            onChange={(e) => setForm({ ...form, aadhaarNumber: e.target.value.replace(/\D/g, "").slice(0, 12) })}
+          />
         </div>
         <div>
           <label className="label">Vehicles</label>

@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema(
     fullName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     mobile: { type: String, required: true },
+    address: { type: String, default: "", trim: true },
+    aadhaarNumber: { type: String, default: undefined, match: /^\d{12}$/ },
     password: { type: String, required: true, minlength: 6 },
     userType: { type: String, enum: ["student", "faculty", "admin"], default: "student" },
     vehicleNumber: { type: String, default: "", set: normalizeVehicleNumber },

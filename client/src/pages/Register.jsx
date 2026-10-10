@@ -28,6 +28,8 @@ const Register = () => {
     email: "",
     countryCode: "+91",
     mobile: "",
+    address: "",
+    aadhaarNumber: "",
     password: "",
     confirmPassword: "",
     vehicleNumber: "",
@@ -46,6 +48,10 @@ const Register = () => {
 
   const handleVehicleNumberChange = (e) => {
     setForm({ ...form, vehicleNumber: e.target.value.toUpperCase() });
+  };
+
+  const handleAadhaarChange = (e) => {
+    setForm({ ...form, aadhaarNumber: e.target.value.replace(/\D/g, "").slice(0, 12) });
   };
 
   const handleSubmit = async (e) => {
@@ -110,6 +116,14 @@ const Register = () => {
             <label className="label">Confirm Password</label>
             <input type="password" className="input" required placeholder="Re-enter password" value={form.confirmPassword} onChange={set("confirmPassword")} />
           </div>
+        </div>
+        <div>
+          <label className="label">Address</label>
+          <textarea className="input min-h-24 resize-y" required placeholder="Enter your address" value={form.address} onChange={set("address")} />
+        </div>
+        <div>
+          <label className="label">Aadhaar Card Number</label>
+          <input type="text" inputMode="numeric" className="input" required placeholder="Enter 12-digit Aadhaar number" maxLength="12" value={form.aadhaarNumber} onChange={handleAadhaarChange} />
         </div>
         <div>
           <label className="label">Vehicle Number</label>
