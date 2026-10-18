@@ -246,6 +246,8 @@ When you're ready to make this publicly accessible:
 - Backend: deploy to Render, Railway, or Cyclic (Node.js hosting) with your MongoDB Atlas URI
 - Frontend: deploy to Vercel or Netlify, set `VITE_API_URL` to your deployed backend URL
 - Update `CLIENT_URL` in the backend `.env` to your deployed frontend URL (for CORS)
+- If the Vercel project root is set to `client`, the included `client/vercel.json` enables
+  refreshes on React Router URLs such as `/dashboard` and `/parking`.
 
 ---
 
