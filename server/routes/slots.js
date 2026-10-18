@@ -2,6 +2,7 @@ const express = require("express");
 const ParkingSlot = require("../models/ParkingSlot");
 const Booking = require("../models/Booking");
 const { protect, adminOnly } = require("../middleware/auth");
+const { isNonEmptyString, isValidDate, isValidTime } = require("../utils/validation");
 
 const router = express.Router();
 
@@ -19,8 +20,11 @@ router.get("/", protect, async (req, res) => {
 router.get("/available", protect, async (req, res) => {
   try {
     const { date, startTime, endTime } = req.query;
-    if (!date || !startTime || !endTime) {
+    if (!isValidDate(date) || !isValidTime(startTime) || !isValidTime(endTime) || startTime >= endTime) {
       return res.status(400).json({ message: "date, startTime and endTime are required" });
+    }
+    if (date < new Date().toISOString().slice(0, 10)) {
+      return res.status(400).json({ message: "Booking date cannot be in the past" });
     }
 
     const allSlots = await ParkingSlot.find({ isActive: true, status: { $ne: "maintenance" } });
@@ -45,6 +49,9 @@ router.get("/available", protect, async (req, res) => {
 // @route POST /api/slots  (admin: add slot)
 router.post("/", protect, adminOnly, async (req, res) => {
   try {
+    if (!isNonEmptyString(req.body.slotNumber) || !isNonEmptyString(req.body.zone) || !isNonEmptyString(req.body.nearestGate)) {
+      return res.status(400).json({ message: "Slot number, zone, and nearest gate are required" });
+    }
     const slot = await ParkingSlot.create(req.body);
     res.status(201).json({ slot });
   } catch (err) {

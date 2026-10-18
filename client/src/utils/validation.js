@@ -45,12 +45,38 @@ export const validateProfile = ({ fullName, mobile, address, aadhaarNumber, vehi
   }
   if (!/^\d{10}$/.test(mobile)) return "Mobile number must contain exactly 10 digits.";
   if (!/^\d{12}$/.test(aadhaarNumber)) return "Aadhaar number must contain exactly 12 digits.";
-  if (vehicles.some((vehicle) => !vehicle.number.trim())) return "Please enter a number for every vehicle or remove empty vehicles.";
+  if (vehicles.some((vehicle) => !String(vehicle.number || "").trim())) return "Please enter a number for every vehicle or remove empty vehicles.";
   return "";
 };
 
 export const validatePasswordChange = ({ currentPassword, newPassword }) => {
   if (!currentPassword || !newPassword) return "Please enter both passwords.";
   if (newPassword.length < 6) return "New password must be at least 6 characters.";
+  return "";
+};
+
+export const validateOtp = (otp) => {
+  if (!/^\d{6}$/.test(String(otp || ""))) return "Please enter the 6-digit OTP.";
+  return "";
+};
+
+export const validateForgotPassword = ({ email }) => {
+  if (!email || !email.trim()) return "Please enter your email address.";
+  if (!isValidEmail(email)) return "Please enter a valid email address.";
+  return "";
+};
+
+export const validateSlot = ({ slotNumber, zone, nearestGate }) => {
+  if (!slotNumber?.trim() || !zone?.trim() || !nearestGate?.trim()) {
+    return "Please fill in the slot number, zone, and nearest gate.";
+  }
+  if (!/^[A-Z0-9-]{1,20}$/i.test(slotNumber.trim())) {
+    return "Slot number may contain only letters, numbers, and hyphens.";
+  }
+  return "";
+};
+
+export const validateNotification = ({ title, message }) => {
+  if (!title?.trim() || !message?.trim()) return "Please enter a title and message.";
   return "";
 };

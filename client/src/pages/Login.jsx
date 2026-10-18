@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import { validateLogin } from "../utils/validation";
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -14,6 +15,12 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    const validationError = validateLogin(form);
+    if (validationError) {
+      setError(validationError);
+      window.alert(validationError);
+      return;
+    }
     setLoading(true);
     try {
       const { data } = await api.post("/auth/login", form);

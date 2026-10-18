@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { validateForgotPassword, validateOtp } from "../utils/validation";
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1);
@@ -14,6 +15,12 @@ const ForgotPassword = () => {
   const requestOtp = async (e) => {
     e.preventDefault();
     setError("");
+    const validationError = validateForgotPassword({ email });
+    if (validationError) {
+      setError(validationError);
+      window.alert(validationError);
+      return;
+    }
     try {
       const { data } = await api.post("/auth/forgot-password", { email });
       setMessage(data.otp ? `${data.message}. Your OTP is ${data.otp}.` : data.message);
@@ -26,6 +33,13 @@ const ForgotPassword = () => {
   const resetPassword = async (e) => {
     e.preventDefault();
     setError("");
+    const validationError = validateForgotPassword({ email }) || validateOtp(otp)
+      || (newPassword.length < 6 ? "New password must be at least 6 characters." : "");
+    if (validationError) {
+      setError(validationError);
+      window.alert(validationError);
+      return;
+    }
     try {
       await api.post("/auth/reset-password", { email, otp, newPassword });
       setMessage("Password reset successful! Redirecting to login...");

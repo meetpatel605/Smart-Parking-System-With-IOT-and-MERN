@@ -25,9 +25,9 @@ const run = async () => {
     console.log("ℹAdmin already exists:", adminEmail);
   }
 
-  // --- Demo parking slots (30 total: A1-A7, B1-B7, C1-C6, D1-D4, E1-E6) ---
+  // --- Demo parking slots (4 total: A1-A4) ---
   const desiredSlots = [];
-  const zoneCounts = { A: 7, B: 7, C: 6, D: 4, E: 6 };
+  const zoneCounts = { A: 4 };
   Object.entries(zoneCounts).forEach(([zone, count]) => {
     for (let i = 1; i <= count; i++) {
       desiredSlots.push({
@@ -50,7 +50,7 @@ const run = async () => {
     await ParkingSlot.insertMany(missingSlots);
     console.log(`✅ ${missingSlots.length} missing demo parking slot(s) created`);
   } else {
-    console.log("ℹ️ All 30 demo parking slots already exist");
+    console.log("ℹ️ All 4 demo parking slots already exist");
   }
 
   console.log("🌱 Seeding complete");

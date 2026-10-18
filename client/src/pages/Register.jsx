@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import { validateOtp, validateRegister } from "../utils/validation";
 
 const COUNTRY_CODES = [
   "+1", "+7", "+20", "+27", "+30", "+31", "+32", "+33", "+34", "+36", "+39", "+40", "+41", "+43", "+44",
@@ -62,8 +63,10 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
+    const validationError = validateRegister(form);
+    if (validationError) {
+      setError(validationError);
+      window.alert(validationError);
       return;
     }
     setLoading(true);
@@ -92,6 +95,12 @@ const Register = () => {
   const handleVerifyEmail = async (e) => {
     e.preventDefault();
     setError("");
+    const validationError = validateOtp(verificationOtp);
+    if (validationError) {
+      setError(validationError);
+      window.alert(validationError);
+      return;
+    }
     setLoading(true);
     try {
       const { data } = await api.post("/auth/verify-email", { email: form.email, otp: verificationOtp });

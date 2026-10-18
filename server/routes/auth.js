@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const User = require("../models/User");
 const { protect } = require("../middleware/auth");
 const { generateQrDataUrl, sendMailWithQr, sendPasswordResetOtp, sendEmailVerificationOtp } = require("../utils/mailer");
+const { isNonEmptyString, isValidEmail, isValidVehicleNumber } = require("../utils/validation");
 
 const router = express.Router();
 const MAX_VEHICLES_PER_USER = 10;
@@ -26,7 +27,15 @@ router.post("/register", async (req, res) => {
     const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
     const normalizedAadhaar = typeof aadhaarNumber === "string" ? aadhaarNumber.replace(/\D/g, "") : "";
 
-    if (!fullName || !normalizedEmail || !mobile || !address || !normalizedAadhaar || !password) {
+    if (
+      !isNonEmptyString(fullName) ||
+      !isValidEmail(normalizedEmail) ||
+      !/^\d{10}$/.test(String(mobile || "").trim()) ||
+      !isNonEmptyString(address) ||
+      !/^\d{12}$/.test(normalizedAadhaar) ||
+      typeof password !== "string" ||
+      password.length < 6
+    ) {
       return res.status(400).json({ message: "Please fill all required fields" });
     }
     if (normalizedAadhaar.length !== 12) {
@@ -97,7 +106,10 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email: email?.toLowerCase() });
+    if (!isValidEmail(email) || typeof password !== "string" || !password) {
+      return res.status(400).json({ message: "Please enter a valid email and password" });
+    }
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) return res.status(400).json({ message: "Invalid email or password" });
     if (user.isBlocked) return res.status(403).json({ message: "Your account has been blocked by admin" });
     if (user.emailVerified === false) return res.status(403).json({ message: "Please verify your email before logging in" });
@@ -143,6 +155,14 @@ router.put("/profile", protect, async (req, res) => {
     const { fullName, mobile, address, aadhaarNumber, vehicleNumber, vehicleType, rfidCardId, profilePhoto, vehicles } = req.body;
     const user = req.user;
     const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
+    if (
+      !isNonEmptyString(fullName) ||
+      !/^\d{10}$/.test(String(mobile || "").trim()) ||
+      !isNonEmptyString(address) ||
+      !/^\d{12}$/.test(String(aadhaarNumber || "").replace(/\D/g, ""))
+    ) {
+      return res.status(400).json({ message: "Full name, mobile, address, and Aadhaar are required and must be valid" });
+    }
     if (fullName) user.fullName = fullName;
     if (mobile) user.mobile = mobile;
     if (address !== undefined) user.address = address.trim();
@@ -173,7 +193,9 @@ router.put("/profile", protect, async (req, res) => {
       const seenVehicleNumbers = new Set();
       for (const v of vehicles) {
         const normalizedNumber = normalizeVehicleNumber(v?.number);
-        if (!normalizedNumber) continue;
+        if (!isValidVehicleNumber(normalizedNumber)) {
+          return res.status(400).json({ message: "Every vehicle must have a valid vehicle number." });
+        }
         if (seenVehicleNumbers.has(normalizedNumber)) {
           return res.status(400).json({ message: `Vehicle number ${normalizedNumber} is already added. Please enter a different number.` });
         }
@@ -208,6 +230,9 @@ router.put("/change-password", protect, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const user = req.user;
+    if (typeof currentPassword !== "string" || !currentPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+      return res.status(400).json({ message: "Enter the current password and a new password of at least 6 characters" });
+    }
     const isMatch = await user.comparePassword(currentPassword);
     if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
     user.password = newPassword;
@@ -222,6 +247,7 @@ router.put("/change-password", protect, async (req, res) => {
 router.post("/forgot-password", async (req, res) => {
   try {
     const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    if (!isValidEmail(email)) return res.status(400).json({ message: "Please enter a valid email address" });
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "No account with that email" });
 
@@ -247,6 +273,9 @@ router.post("/reset-password", async (req, res) => {
   try {
     const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
     const { otp, newPassword } = req.body;
+    if (!isValidEmail(email) || !/^\d{6}$/.test(String(otp || ""))) {
+      return res.status(400).json({ message: "Please enter a valid email and 6-digit OTP" });
+    }
     if (typeof newPassword !== "string" || newPassword.length < 6) {
       return res.status(400).json({ message: "New password must be at least 6 characters" });
     }

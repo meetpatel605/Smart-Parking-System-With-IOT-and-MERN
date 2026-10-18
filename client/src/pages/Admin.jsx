@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/axios";
+import { validateSlot } from "../utils/validation";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -97,6 +98,10 @@ const Users = () => {
   const assignRfid = async (u) => {
     const rfid = window.prompt("Enter RFID Card ID for " + u.fullName, u.rfidCardId || "");
     if (rfid === null) return;
+    if (!rfid.trim()) {
+      window.alert("RFID Card ID cannot be empty.");
+      return;
+    }
     await api.put(`/admin/users/${u._id}`, { rfidCardId: rfid });
     load();
   };
@@ -184,6 +189,12 @@ const Slots = ({ onChange }) => {
   const addSlot = async (e) => {
     e.preventDefault();
     setError("");
+    const validationError = validateSlot(form);
+    if (validationError) {
+      setError(validationError);
+      window.alert(validationError);
+      return;
+    }
     try {
       await api.post("/slots", form);
       setForm(emptySlotForm);
