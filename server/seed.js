@@ -18,28 +18,28 @@ const run = async () => {
       mobile: "9999999999",
       password: adminPassword,
       userType: "admin",
+      emailVerified: true,
     });
     console.log(`Admin created -> email: ${adminEmail}  password: ${adminPassword}`);
   } else {
     console.log("ℹAdmin already exists:", adminEmail);
   }
 
-  // --- Demo parking slots (30 total: A1-A7, B1-B7, C1-C6, D1-D4, E1-E6) ---
-  const desiredSlots = [];
-  const zoneCounts = { A: 7, B: 7, C: 6, D: 4, E: 6 };
-  Object.entries(zoneCounts).forEach(([zone, count]) => {
-    for (let i = 1; i <= count; i++) {
-      desiredSlots.push({
-        slotNumber: `${zone}${i}`,
-        zone,
-        nearestGate: zone === "A" ? "Main Gate" : zone === "B" ? "East Gate" : zone === "C" ? "West Gate" : "North Gate",
-        chargingAvailable: i % 4 === 0,
-        covered: i % 3 === 0,
-        category: i === 1 ? "disabled" : i % 5 === 0 ? "ev" : "general",
-        status: "available",
-      });
-    }
-  });
+  // --- Demo parking slots (4 total: A1-A4) ---
+  const desiredSlots = [
+    { slotNumber: "A1", zone: "A", nearestGate: "Main Gate", category: "disabled", status: "available" },
+    { slotNumber: "A2", zone: "A", nearestGate: "Main Gate", category: "general", status: "available" },
+    { slotNumber: "A3", zone: "A", nearestGate: "Main Gate", covered: true, category: "general", status: "available" },
+    { slotNumber: "A4", zone: "A", nearestGate: "Main Gate", chargingAvailable: true, category: "general", status: "available" },
+  ];
+  const removedDemoSlots = [
+    "A5", "A6", "A7",
+    "B1", "B2", "B3", "B4", "B5", "B6", "B7",
+    "C1", "C2", "C3", "C4", "C5", "C6",
+    "D1", "D2", "D3", "D4",
+    "E1", "E2", "E3", "E4", "E5", "E6",
+  ];
+  await ParkingSlot.deleteMany({ slotNumber: { $in: removedDemoSlots } });
 
   const existingSlotNumbers = new Set(
     (await ParkingSlot.find({}, { slotNumber: 1 })).map((slot) => slot.slotNumber)
@@ -49,7 +49,7 @@ const run = async () => {
     await ParkingSlot.insertMany(missingSlots);
     console.log(`✅ ${missingSlots.length} missing demo parking slot(s) created`);
   } else {
-    console.log("ℹ️ All 30 demo parking slots already exist");
+    console.log("ℹ️ All 4 demo parking slots already exist");
   }
 
   console.log("🌱 Seeding complete");

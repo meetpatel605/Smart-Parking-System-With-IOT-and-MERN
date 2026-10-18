@@ -31,8 +31,8 @@ const Navbar = () => {
   return (
     <nav className="bg-base-card border-b border-base-border sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 font-bold text-lg text-primary">
-          🚗 Smart Parking
+        <Link to="/dashboard" className="font-bold text-lg text-primary">
+          Smart Parking
         </Link>
 
         <button className="md:hidden text-slate-300" onClick={() => setOpen(!open)}>

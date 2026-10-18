@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import { validatePasswordChange, validateProfile } from "../utils/validation";
 
 const MAX_VEHICLES_PER_USER = 10;
 
@@ -28,6 +29,11 @@ const Profile = () => {
     e.preventDefault();
     setError("");
     setMsg("");
+    const validationError = validateProfile(form);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     try {
       const { data } = await api.put("/auth/profile", form);
       updateUser(data.user);
@@ -41,6 +47,11 @@ const Profile = () => {
     e.preventDefault();
     setPwError("");
     setPwMsg("");
+    const validationError = validatePasswordChange(pwForm);
+    if (validationError) {
+      setPwError(validationError);
+      return;
+    }
     try {
       await api.put("/auth/change-password", pwForm);
       setPwMsg("Password changed successfully!");

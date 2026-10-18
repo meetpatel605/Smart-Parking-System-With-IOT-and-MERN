@@ -3,7 +3,8 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
 const { protect } = require("../middleware/auth");
-const { generateQrDataUrl, sendMailWithQr } = require("../utils/mailer");
+const { generateQrDataUrl, sendMailWithQr, sendPasswordResetOtp, sendEmailVerificationOtp } = require("../utils/mailer");
+const { isNonEmptyString, isValidEmail, isValidVehicleNumber } = require("../utils/validation");
 
 const router = express.Router();
 const MAX_VEHICLES_PER_USER = 10;
@@ -22,17 +23,21 @@ const signToken = (id) =>
 router.post("/register", async (req, res) => {
   try {
     const { fullName, email, mobile, address, aadhaarNumber, password, userType, vehicleNumber, vehicleType, rfidCardId } = req.body;
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
     const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
     const normalizedAadhaar = typeof aadhaarNumber === "string" ? aadhaarNumber.replace(/\D/g, "") : "";
 
-    if (!fullName || !email || !mobile || !address || !normalizedAadhaar || !password) {
+    if (!isNonEmptyString(fullName) || !isValidEmail(normalizedEmail) || !/^\d{10}$/.test(String(mobile || "").trim()) || !isNonEmptyString(address) || !/^\d{12}$/.test(normalizedAadhaar) || typeof password !== "string" || password.length < 6) {
       return res.status(400).json({ message: "Please fill all required fields" });
     }
     if (normalizedAadhaar.length !== 12) {
       return res.status(400).json({ message: "Aadhaar number must contain exactly 12 digits" });
     }
+    if (normalizedVehicleNumber && !isValidVehicleNumber(normalizedVehicleNumber)) {
+      return res.status(400).json({ message: "Please enter a valid vehicle number" });
+    }
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) return res.status(400).json({ message: "Email already registered" });
 
     // prepare initial vehicles array with a QR token for the vehicle (if provided)
@@ -47,7 +52,7 @@ router.post("/register", async (req, res) => {
 
     const user = await User.create({
       fullName,
-      email,
+      email: normalizedEmail,
       mobile,
       address,
       aadhaarNumber: normalizedAadhaar,
@@ -55,6 +60,9 @@ router.post("/register", async (req, res) => {
       userType: userType === "faculty" ? "faculty" : "student",
       vehicleNumber: normalizedVehicleNumber || "",
       vehicleType: vehicleType || "4-wheeler",
+      emailVerified: false,
+      emailVerificationOtp: Math.floor(100000 + Math.random() * 900000).toString(),
+      emailVerificationOtpExpires: new Date(Date.now() + 10 * 60 * 1000),
       ...(rfidCardId?.trim() ? { rfidCardId: rfidCardId.trim() } : {}),
       vehicles,
     });
@@ -69,8 +77,19 @@ router.post("/register", async (req, res) => {
       // ignore mail errors for now
     }
 
-    const token = signToken(user._id);
-    const resp = { token, user: user.toSafeObject() };
+    const verificationOtp = user.emailVerificationOtp;
+    let mailedVerification = false;
+    try {
+      mailedVerification = await sendEmailVerificationOtp(user.email, verificationOtp);
+    } catch (err) {
+      mailedVerification = false;
+    }
+    const resp = {
+      requiresEmailVerification: true,
+      message: mailedVerification ? "Verification OTP sent to your email" : "Demo mode: SMTP is not configured",
+      user: user.toSafeObject(),
+    };
+    if (!mailedVerification) resp.demoOtp = verificationOtp;
     if (!mailed && qrDataUrl) resp.qrDataUrl = qrDataUrl;
     res.status(201).json(resp);
   } catch (err) {
@@ -82,15 +101,43 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email: email?.toLowerCase() });
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    if (!isValidEmail(normalizedEmail) || typeof password !== "string" || !password) {
+      return res.status(400).json({ message: "Please enter a valid email and password" });
+    }
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) return res.status(400).json({ message: "Invalid email or password" });
     if (user.isBlocked) return res.status(403).json({ message: "Your account has been blocked by admin" });
+    if (user.emailVerified === false) return res.status(403).json({ message: "Please verify your email before logging in" });
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(400).json({ message: "Invalid email or password" });
 
     const token = signToken(user._id);
     res.json({ token, user: user.toSafeObject() });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// @route POST /api/auth/verify-email
+router.post("/verify-email", async (req, res) => {
+  try {
+    const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const { otp } = req.body;
+    if (!isValidEmail(email) || !/^\d{6}$/.test(String(otp || ""))) {
+      return res.status(400).json({ message: "Please enter a valid email and 6-digit OTP" });
+    }
+    const user = await User.findOne({ email });
+    if (!user || user.emailVerified || user.emailVerificationOtp !== otp || !user.emailVerificationOtpExpires || user.emailVerificationOtpExpires < new Date()) {
+      return res.status(400).json({ message: "Invalid or expired verification OTP" });
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationOtp = null;
+    user.emailVerificationOtpExpires = null;
+    await user.save();
+    res.json({ token: signToken(user._id), user: user.toSafeObject() });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -107,9 +154,18 @@ router.put("/profile", protect, async (req, res) => {
     const { fullName, mobile, address, aadhaarNumber, vehicleNumber, vehicleType, rfidCardId, profilePhoto, vehicles } = req.body;
     const user = req.user;
     const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
-    if (fullName) user.fullName = fullName;
-    if (mobile) user.mobile = mobile;
-    if (address !== undefined) user.address = address.trim();
+    if (fullName !== undefined) {
+      if (!isNonEmptyString(fullName)) return res.status(400).json({ message: "Full name is required" });
+      user.fullName = fullName.trim();
+    }
+    if (mobile !== undefined) {
+      if (!/^\d{10}$/.test(String(mobile).trim())) return res.status(400).json({ message: "Mobile number must contain exactly 10 digits" });
+      user.mobile = String(mobile).trim();
+    }
+    if (address !== undefined) {
+      if (!isNonEmptyString(address)) return res.status(400).json({ message: "Address is required" });
+      user.address = address.trim();
+    }
     if (aadhaarNumber !== undefined) {
       const normalizedAadhaar = typeof aadhaarNumber === "string" ? aadhaarNumber.replace(/\D/g, "") : "";
       if (normalizedAadhaar.length !== 12) {
@@ -118,7 +174,13 @@ router.put("/profile", protect, async (req, res) => {
       user.aadhaarNumber = normalizedAadhaar;
     }
     if (vehicleNumber !== undefined) user.vehicleNumber = normalizedVehicleNumber;
-    if (vehicleType) user.vehicleType = vehicleType;
+    if (vehicleNumber !== undefined && normalizedVehicleNumber && !isValidVehicleNumber(normalizedVehicleNumber)) {
+      return res.status(400).json({ message: "Please enter a valid vehicle number" });
+    }
+    if (vehicleType !== undefined) {
+      if (!["2-wheeler", "4-wheeler", "other"].includes(vehicleType)) return res.status(400).json({ message: "Invalid vehicle type" });
+      user.vehicleType = vehicleType;
+    }
     if (rfidCardId !== undefined) {
       const normalizedRfid = typeof rfidCardId === "string" ? rfidCardId.trim() : "";
       user.rfidCardId = normalizedRfid || undefined;
@@ -137,7 +199,9 @@ router.put("/profile", protect, async (req, res) => {
       const seenVehicleNumbers = new Set();
       for (const v of vehicles) {
         const normalizedNumber = normalizeVehicleNumber(v?.number);
-        if (!normalizedNumber) continue;
+        if (!normalizedNumber || !isValidVehicleNumber(normalizedNumber)) {
+          return res.status(400).json({ message: "Every vehicle must have a valid vehicle number." });
+        }
         if (seenVehicleNumbers.has(normalizedNumber)) {
           return res.status(400).json({ message: `Vehicle number ${normalizedNumber} is already added. Please enter a different number.` });
         }
@@ -171,6 +235,9 @@ router.put("/profile", protect, async (req, res) => {
 router.put("/change-password", protect, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
+    if (typeof currentPassword !== "string" || !currentPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+      return res.status(400).json({ message: "Please enter the current password and a new password of at least 6 characters" });
+    }
     const user = req.user;
     const isMatch = await user.comparePassword(currentPassword);
     if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
@@ -185,8 +252,9 @@ router.put("/change-password", protect, async (req, res) => {
 // @route POST /api/auth/forgot-password  (simplified OTP demo — OTP returned in response since no email service configured)
 router.post("/forgot-password", async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ email: email?.toLowerCase() });
+    const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    if (!isValidEmail(email)) return res.status(400).json({ message: "Please enter a valid email address" });
+    const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "No account with that email" });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -194,8 +262,13 @@ router.post("/forgot-password", async (req, res) => {
     user.resetOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    // NOTE: In production, email this OTP instead of returning it.
-    res.json({ message: "OTP generated", otp });
+    const mailed = await sendPasswordResetOtp(email, otp);
+    if (mailed) {
+      return res.json({ message: "OTP sent to your email" });
+    }
+
+    // Keep local development usable when SMTP is not configured.
+    res.json({ message: "Demo mode: SMTP is not configured", otp });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -204,8 +277,12 @@ router.post("/forgot-password", async (req, res) => {
 // @route POST /api/auth/reset-password
 router.post("/reset-password", async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
-    const user = await User.findOne({ email: email?.toLowerCase() });
+    const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const { otp, newPassword } = req.body;
+    if (!isValidEmail(email) || !/^\d{6}$/.test(String(otp || "")) || typeof newPassword !== "string" || newPassword.length < 6) {
+      return res.status(400).json({ message: "Please enter a valid email, 6-digit OTP, and password of at least 6 characters" });
+    }
+    const user = await User.findOne({ email });
     if (!user || user.resetOtp !== otp || !user.resetOtpExpires || user.resetOtpExpires < new Date()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }

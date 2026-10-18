@@ -30,6 +30,9 @@ const userSchema = new mongoose.Schema(
     ],
     profilePhoto: { type: String, default: "" },
     isBlocked: { type: Boolean, default: false },
+    emailVerified: { type: Boolean, default: true },
+    emailVerificationOtp: { type: String, default: null },
+    emailVerificationOtpExpires: { type: Date, default: null },
     resetOtp: { type: String, default: null },
     resetOtpExpires: { type: Date, default: null },
   },
@@ -54,6 +57,8 @@ userSchema.methods.comparePassword = function (candidate) {
 userSchema.methods.toSafeObject = function () {
   const obj = this.toObject();
   delete obj.password;
+  delete obj.emailVerificationOtp;
+  delete obj.emailVerificationOtpExpires;
   delete obj.resetOtp;
   delete obj.resetOtpExpires;
   // Remove internal QR tokens from vehicles before exposing

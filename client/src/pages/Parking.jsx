@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import ParkingSlotCard from "../components/ParkingSlotCard";
+import { validateBooking } from "../utils/validation";
 
 const Parking = () => {
   const { user } = useAuth();
@@ -33,6 +34,11 @@ const Parking = () => {
     setError("");
     setMessage("");
     setSelectedSlot(null);
+    const validationError = validateBooking(form);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setSearching(true);
     try {
       const { data } = await api.get("/slots/available", { params: form });
@@ -48,6 +54,11 @@ const Parking = () => {
   const confirmBooking = async () => {
     if (!selectedSlot) return;
     setError("");
+    const validationError = validateBooking(form);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setBooking(true);
     try {
       await api.post("/bookings", {

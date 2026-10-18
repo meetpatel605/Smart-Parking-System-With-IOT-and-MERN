@@ -81,6 +81,11 @@ MONGO_URI=mongodb://127.0.0.1:27017/smart_parking
 JWT_SECRET=change_this_to_a_long_random_secret
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-gmail-app-password
+SMTP_FROM=your-email@gmail.com
 ADMIN_EMAIL=admin@smartparking.com
 ADMIN_PASSWORD=Admin@123
 ```
@@ -91,6 +96,9 @@ ADMIN_PASSWORD=Admin@123
 - If you're using **local MongoDB**, the default value already works.
 - Change `JWT_SECRET` to any random long string (this signs login tokens).
 - You can change the default admin email/password here too.
+- For Gmail, enable 2-Step Verification and create an App Password. Use that App Password
+  as `SMTP_PASS`; do not use your regular Gmail password. If SMTP variables are omitted,
+  forgot-password remains available in local demo mode and displays the OTP in the response.
 
 ### Seed the database (creates admin account + demo parking slots)
 

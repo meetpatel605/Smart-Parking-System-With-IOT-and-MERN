@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { isValidEmail } from "../utils/validation";
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1);
@@ -14,9 +15,13 @@ const ForgotPassword = () => {
   const requestOtp = async (e) => {
     e.preventDefault();
     setError("");
+    if (!email.trim() || !isValidEmail(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     try {
       const { data } = await api.post("/auth/forgot-password", { email });
-      setMessage(`Demo mode: your OTP is ${data.otp} (in production this would be emailed).`);
+      setMessage(data.otp ? `${data.message}. Your OTP is ${data.otp}.` : data.message);
       setStep(2);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to send OTP");
@@ -26,6 +31,14 @@ const ForgotPassword = () => {
   const resetPassword = async (e) => {
     e.preventDefault();
     setError("");
+    if (!/^\d{6}$/.test(otp)) {
+      setError("OTP must contain exactly 6 digits.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError("New password must be at least 6 characters.");
+      return;
+    }
     try {
       await api.post("/auth/reset-password", { email, otp, newPassword });
       setMessage("Password reset successful! Redirecting to login...");
@@ -58,7 +71,7 @@ const ForgotPassword = () => {
             </div>
             <div>
               <label className="label">New Password</label>
-              <input type="password" className="input" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <input type="password" className="input" required minLength="6" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             </div>
             <button className="btn-primary w-full">Reset Password</button>
           </form>
