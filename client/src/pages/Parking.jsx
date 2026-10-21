@@ -3,6 +3,7 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import ParkingSlotCard from "../components/ParkingSlotCard";
 import { validateBooking } from "../utils/validation";
+import { createSocket } from "../api/socket";
 
 const Parking = () => {
   const { user } = useAuth();
@@ -27,6 +28,13 @@ const Parking = () => {
 
   useEffect(() => {
     loadAllSlots();
+    const socket = createSocket();
+    socket.on("slot:status", (updatedSlot) => {
+      setSlots((current) => current.map((slot) => (
+        slot._id === updatedSlot._id ? { ...slot, ...updatedSlot } : slot
+      )));
+    });
+    return () => socket.disconnect();
   }, []);
 
   const findAvailable = async (e) => {

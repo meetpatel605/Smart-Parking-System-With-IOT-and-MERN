@@ -106,6 +106,24 @@ const handleMessage = async (topic, message) => {
     const status = ["available", "occupied", "reserved", "maintenance"].includes(payload.status) ? payload.status : null;
     if (!status) return;
     const updated = await ParkingSlot.findOneAndUpdate({ slotNumber: slot[1] }, { status }, { new: true });
+    if (typeof payload.detected === "boolean") {
+      const deviceId = String(payload.deviceId || "mqtt");
+      const sensorKey = `${deviceId}-${slot[1].toUpperCase()}`;
+      const sensor = await IRStatus.findOneAndUpdate(
+        { deviceId: sensorKey },
+        {
+          $set: {
+            deviceId: sensorKey,
+            parentDeviceId: deviceId,
+            slotId: slot[1].toUpperCase(),
+            detected: payload.detected,
+            lastUpdated: payload.timestamp ? new Date(payload.timestamp) : new Date(),
+          },
+        },
+        { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+      emit("ir:status", { ...sensor.toObject(), parkingSlot: updated || null });
+    }
     if (updated) emit("slot:status", updated);
     return updated;
   }

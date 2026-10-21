@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createSocket } from "../api/socket";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5252/api").replace(/\/$/, "");
 const DEVICE_ID = import.meta.env.VITE_IR_DEVICE_ID || "ESP32-01";
@@ -30,10 +31,22 @@ export default function IRSensorStatus() {
     }
 
     fetchStatus();
-    const interval = setInterval(fetchStatus, 3000);
+    const socket = createSocket();
+    socket.on("ir:status", (status) => {
+      if (!active) return;
+      setStatuses((current) => {
+        const next = current.filter((item) => item.deviceId !== status.deviceId);
+        return [...next, status].sort((a, b) => (a.slotId || "").localeCompare(b.slotId || ""));
+      });
+      setError("");
+    });
+    socket.on("connect_error", (socketError) => {
+      if (active && statuses.length === 0) setError(socketError.message);
+    });
+
     return () => {
       active = false;
-      clearInterval(interval);
+      socket.disconnect();
     };
   }, []);
 

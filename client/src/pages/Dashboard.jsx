@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import IRSensorStatus from "../components/IRSensorStatus";
+import { createSocket } from "../api/socket";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -29,6 +30,13 @@ const Dashboard = () => {
       }
     };
     load();
+    const socket = createSocket();
+    socket.on("slot:status", (updatedSlot) => {
+      setSlots((current) => current.map((slot) => (
+        slot._id === updatedSlot._id ? { ...slot, ...updatedSlot } : slot
+      )));
+    });
+    return () => socket.disconnect();
   }, []);
 
   const today = new Date().toISOString().slice(0, 10);
