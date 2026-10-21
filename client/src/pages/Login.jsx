@@ -72,10 +72,7 @@ const Login = () => {
             </button>
           </div>
         </div>
-        <div className="flex justify-between text-sm">
-          <label className="flex items-center gap-2 text-slate-400">
-            <input type="checkbox" /> Remember Me
-          </label>
+        <div className="flex justify-end text-sm">
           <Link to="/forgot-password" className="text-primary">Forgot Password?</Link>
         </div>
         <button className="btn-primary w-full" disabled={loading}>
