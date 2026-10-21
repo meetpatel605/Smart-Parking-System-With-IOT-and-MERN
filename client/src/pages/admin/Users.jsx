@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
 import { Search, Ban, CheckCircle, Trash2, Eye, X } from "lucide-react";
 
+const getDisplayUserType = (userType) => (userType === "admin" ? "admin" : "user");
+
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
@@ -78,7 +80,7 @@ const AdminUsers = () => {
                   <tr key={u._id} className="border-b border-base-border/50 hover:bg-white/[0.02]">
                     <td className="py-2 pr-4">{u.fullName}</td>
                     <td className="py-2 pr-4">{u.email}</td>
-                    <td className="py-2 pr-4 capitalize">{u.userType}</td>
+                    <td className="py-2 pr-4 capitalize">{getDisplayUserType(u.userType)}</td>
                     <td className="py-2 pr-4">{u.vehicleNumber || "-"} <span className="text-slate-500">({u.vehicleType || "-"})</span></td>
                     <td className="py-2 pr-4">{u.rfidCardId || <span className="text-slate-500">Unassigned</span>}</td>
                     <td className="py-2 pr-4">
@@ -122,7 +124,7 @@ const AdminUsers = () => {
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm mb-6">
               <p><span className="text-slate-500">Mobile:</span> {viewUser.mobile}</p>
-              <p><span className="text-slate-500">Type:</span> {viewUser.userType}</p>
+              <p><span className="text-slate-500">Type:</span> {getDisplayUserType(viewUser.userType)}</p>
               <p><span className="text-slate-500">Vehicle:</span> {viewUser.vehicleNumber || "-"}</p>
               <p><span className="text-slate-500">Vehicle Type:</span> {viewUser.vehicleType || "-"}</p>
               <p><span className="text-slate-500">RFID:</span> {viewUser.rfidCardId || "Unassigned"}</p>

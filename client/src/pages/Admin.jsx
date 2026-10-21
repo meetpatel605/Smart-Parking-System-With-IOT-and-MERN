@@ -9,6 +9,7 @@ import {
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#a78bfa"];
 
 const TABS = ["Overview", "Users", "Slots", "Bookings", "Analytics"];
+const getDisplayUserType = (userType) => (userType === "admin" ? "admin" : "user");
 
 const Admin = () => {
   const [tab, setTab] = useState("Overview");
@@ -141,7 +142,7 @@ const Users = () => {
                 <tr key={u._id} className="border-b border-base-border/50">
                   <td className="py-2 pr-4">{u.fullName}</td>
                   <td className="py-2 pr-4">{u.email}</td>
-                  <td className="py-2 pr-4 capitalize">{u.userType}</td>
+                  <td className="py-2 pr-4 capitalize">{getDisplayUserType(u.userType)}</td>
                   <td className="py-2 pr-4">{u.vehicleNumber || "-"}</td>
                   <td className="py-2 pr-4">{u.rfidCardId || "-"}</td>
                   <td className="py-2 pr-4">

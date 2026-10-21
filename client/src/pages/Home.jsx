@@ -22,7 +22,7 @@ const Home = () => {
       {/* Hero */}
       <section className="bg-gradient-to-b from-emerald-900/30 to-base px-4 py-20 text-center">
         <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
-          🚗 Smart <span className="text-primary">Parking</span> Management System
+          Smart <span className="text-primary">Parking</span> Management System
         </h1>
         <p className="text-slate-400 max-w-xl mx-auto mb-8">
           IoT + RFID powered campus parking — book a slot in seconds, park without the hassle.
