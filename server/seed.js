@@ -18,7 +18,6 @@ const run = async () => {
       mobile: "9999999999",
       password: adminPassword,
       userType: "admin",
-      emailVerified: true,
     });
     console.log(`Admin created -> email: ${adminEmail}  password: ${adminPassword}`);
   } else {

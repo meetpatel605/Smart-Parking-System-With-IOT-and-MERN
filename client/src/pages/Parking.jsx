@@ -2,17 +2,18 @@ import React, { useEffect, useState } from "react";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import ParkingSlotCard from "../components/ParkingSlotCard";
-import { validateBooking } from "../utils/validation";
+import { getDefaultBookingTimes, getLocalDate, getLocalTime, validateBooking } from "../utils/validation";
 import { createSocket } from "../api/socket";
 
 const Parking = () => {
   const { user } = useAuth();
+  const defaultTimes = getDefaultBookingTimes();
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    startTime: "09:00",
-    endTime: "11:00",
+    date: getLocalDate(),
+    startTime: defaultTimes.startTime,
+    endTime: defaultTimes.endTime,
     vehicleNumber: (user?.vehicles && user.vehicles.length > 0) ? user.vehicles[0].number : (user?.vehicleNumber || ""),
   });
   const [searching, setSearching] = useState(false);
@@ -20,6 +21,21 @@ const Parking = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [booking, setBooking] = useState(false);
+  const [currentTime, setCurrentTime] = useState(getLocalTime());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(getLocalTime()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const handleDateChange = (date) => {
+    const startTime = date === getLocalDate() ? getLocalTime() : form.startTime;
+    setForm({ ...form, date, startTime });
+  };
+
+  const handleStartTimeChange = (startTime) => {
+    setForm({ ...form, startTime });
+  };
 
   const loadAllSlots = async () => {
     const { data } = await api.get("/slots");
@@ -99,11 +115,11 @@ const Parking = () => {
       <form onSubmit={findAvailable} className="card mb-8 grid sm:grid-cols-5 gap-4 items-end">
         <div>
           <label className="label">Date</label>
-          <input type="date" className="input" required value={form.date} min={new Date().toISOString().slice(0,10)} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          <input type="date" className="input" required value={form.date} min={getLocalDate()} onChange={(e) => handleDateChange(e.target.value)} />
         </div>
         <div>
           <label className="label">Start Time</label>
-          <input type="time" className="input" required value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
+          <input type="time" className="input" required min={form.date === getLocalDate() ? currentTime : undefined} value={form.startTime} onChange={(e) => handleStartTimeChange(e.target.value)} />
         </div>
         <div>
           <label className="label">End Time</label>

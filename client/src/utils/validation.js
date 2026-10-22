@@ -1,6 +1,22 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+export const getLocalDate = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+};
+
+export const getLocalTime = () => {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+};
+
+const getDefaultEndTime = (startTime) => {
+  const [hours, minutes] = startTime.split(":").map(Number);
+  return `${String(Math.min(hours + 2, 23)).padStart(2, "0")}:${String(hours + 2 > 23 ? 59 : minutes).padStart(2, "0")}`;
+};
+
 export const isValidEmail = (value) => EMAIL_PATTERN.test(value.trim());
 
 export const validateLogin = ({ email, password }) => {
@@ -35,8 +51,14 @@ export const validateBooking = ({ date, startTime, endTime, vehicleNumber }) => 
   if (!date || !startTime || !endTime || !vehicleNumber.trim()) return "Please fill in all booking fields.";
   if (!TIME_PATTERN.test(startTime) || !TIME_PATTERN.test(endTime)) return "Please enter valid booking times.";
   if (startTime >= endTime) return "End time must be after start time.";
-  if (date < new Date().toISOString().slice(0, 10)) return "Booking date cannot be in the past.";
+  if (date < getLocalDate()) return "Booking date cannot be in the past.";
+  if (date === getLocalDate() && startTime < getLocalTime()) return "Start time must be from the current time.";
   return "";
+};
+
+export const getDefaultBookingTimes = () => {
+  const startTime = getLocalTime();
+  return { startTime, endTime: getDefaultEndTime(startTime) };
 };
 
 export const validateProfile = ({ fullName, mobile, address, aadhaarNumber, vehicles }) => {

@@ -4,7 +4,7 @@ const Booking = require("../models/Booking");
 const ParkingSlot = require("../models/ParkingSlot");
 const Notification = require("../models/Notification");
 const { protect } = require("../middleware/auth");
-const { isValidDate, isValidTime, isValidVehicleNumber } = require("../utils/validation");
+const { getParkingDateTimeParts, isValidDate, isValidTime, isValidVehicleNumber } = require("../utils/validation");
 
 const router = express.Router();
 
@@ -19,8 +19,12 @@ router.post("/", protect, async (req, res) => {
     if (!slotId || !isValidDate(date) || !isValidTime(startTime) || !isValidTime(endTime) || !isValidVehicleNumber(normalizedVehicleNumber)) {
       return res.status(400).json({ message: "All fields are required" });
     }
-    if (date < new Date().toISOString().slice(0, 10)) {
+    const currentParkingTime = getParkingDateTimeParts();
+    if (date < currentParkingTime.date) {
       return res.status(400).json({ message: "Booking date cannot be in the past" });
+    }
+    if (date === currentParkingTime.date && startTime < currentParkingTime.time) {
+      return res.status(400).json({ message: "Start time must be from the current time" });
     }
     if (startTime >= endTime) {
       return res.status(400).json({ message: "End time must be after start time" });

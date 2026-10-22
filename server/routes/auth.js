@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
 const { protect } = require("../middleware/auth");
-const { generateQrDataUrl, sendMailWithQr, sendPasswordResetOtp, sendEmailVerificationOtp } = require("../utils/mailer");
+const { generateQrDataUrl, sendMailWithQr, sendPasswordResetOtp } = require("../utils/mailer");
 const { isNonEmptyString, isValidEmail, isValidVehicleNumber } = require("../utils/validation");
 
 const router = express.Router();
@@ -65,9 +65,6 @@ router.post("/register", async (req, res) => {
       userType: userType === "faculty" ? "faculty" : "student",
       vehicleNumber: normalizedVehicleNumber || "",
       vehicleType: vehicleType || "4-wheeler",
-      emailVerified: false,
-      emailVerificationOtp: Math.floor(100000 + Math.random() * 900000).toString(),
-      emailVerificationOtpExpires: new Date(Date.now() + 10 * 60 * 1000),
       ...(rfidCardId?.trim() ? { rfidCardId: rfidCardId.trim() } : {}),
       vehicles,
     });
@@ -82,19 +79,11 @@ router.post("/register", async (req, res) => {
       // ignore mail errors for now
     }
 
-    const verificationOtp = user.emailVerificationOtp;
-    let mailedVerification = false;
-    try {
-      mailedVerification = await sendEmailVerificationOtp(user.email, verificationOtp);
-    } catch (err) {
-      mailedVerification = false;
-    }
     const resp = {
-      requiresEmailVerification: true,
-      message: mailedVerification ? "Verification OTP sent to your email" : "Demo mode: SMTP is not configured",
+      token: signToken(user._id),
+      message: "Registration successful",
       user: user.toSafeObject(),
     };
-    if (!mailedVerification) resp.demoOtp = verificationOtp;
     if (!mailed && qrDataUrl) resp.qrDataUrl = qrDataUrl;
     res.status(201).json(resp);
   } catch (err) {
@@ -112,33 +101,11 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) return res.status(400).json({ message: "Invalid email or password" });
     if (user.isBlocked) return res.status(403).json({ message: "Your account has been blocked by admin" });
-    if (user.emailVerified === false) return res.status(403).json({ message: "Please verify your email before logging in" });
-
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(400).json({ message: "Invalid email or password" });
 
     const token = signToken(user._id);
     res.json({ token, user: user.toSafeObject() });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// @route POST /api/auth/verify-email
-router.post("/verify-email", async (req, res) => {
-  try {
-    const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
-    const { otp } = req.body;
-    const user = await User.findOne({ email });
-    if (!user || user.emailVerified || user.emailVerificationOtp !== otp || !user.emailVerificationOtpExpires || user.emailVerificationOtpExpires < new Date()) {
-      return res.status(400).json({ message: "Invalid or expired verification OTP" });
-    }
-
-    user.emailVerified = true;
-    user.emailVerificationOtp = null;
-    user.emailVerificationOtpExpires = null;
-    await user.save();
-    res.json({ token: signToken(user._id), user: user.toSafeObject() });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

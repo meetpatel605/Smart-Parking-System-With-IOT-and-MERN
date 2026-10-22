@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
-import { validateOtp, validateRegister } from "../utils/validation";
+import { validateRegister } from "../utils/validation";
 
 const COUNTRY_CODES = [
   "+1", "+7", "+20", "+27", "+30", "+31", "+32", "+33", "+34", "+36", "+39", "+40", "+41", "+43", "+44",
@@ -37,9 +37,6 @@ const Register = () => {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [verificationStep, setVerificationStep] = useState(false);
-  const [verificationOtp, setVerificationOtp] = useState("");
-  const [verificationMessage, setVerificationMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { login } = useAuth();
@@ -72,11 +69,6 @@ const Register = () => {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/register", form);
-      if (data.requiresEmailVerification) {
-        setVerificationMessage(data.demoOtp ? `${data.message}. Your OTP is ${data.demoOtp}.` : data.message);
-        setVerificationStep(true);
-        return;
-      }
       login(data.token, data.user);
       if (data.qrDataUrl) {
         // SMTP not configured on server, show QR so user can save/print
@@ -91,47 +83,6 @@ const Register = () => {
       setLoading(false);
     }
   };
-
-  const handleVerifyEmail = async (e) => {
-    e.preventDefault();
-    setError("");
-    const validationError = validateOtp(verificationOtp);
-    if (validationError) {
-      setError(validationError);
-      window.alert(validationError);
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data } = await api.post("/auth/verify-email", { email: form.email, otp: verificationOtp });
-      login(data.token, data.user);
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.message || "Email verification failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (verificationStep) {
-    return (
-      <div className="max-w-md mx-auto px-4 py-14">
-        <h1 className="text-3xl font-bold mb-6 text-center">Verify Email</h1>
-        <form onSubmit={handleVerifyEmail} className="card space-y-4">
-          {error && <div className="bg-red-500/10 border border-danger text-danger text-sm p-2 rounded">{error}</div>}
-          {verificationMessage && <div className="bg-primary/10 border border-primary text-primary text-sm p-2 rounded">{verificationMessage}</div>}
-          <p className="text-sm text-slate-400">Enter the verification OTP sent to {form.email}.</p>
-          <div>
-            <label className="label">Verification OTP</label>
-            <input className="input" required inputMode="numeric" pattern="[0-9]{6}" maxLength="6" value={verificationOtp} onChange={(e) => setVerificationOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} />
-          </div>
-          <button className="btn-primary w-full" disabled={loading}>
-            {loading ? "Verifying..." : "Verify Email"}
-          </button>
-        </form>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-14">

@@ -1,29 +1,30 @@
 const QRCode = require("qrcode");
 const nodemailer = require("nodemailer");
 
+const isSmtpConfigured = () => Boolean(
+  process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS
+);
+
+const createTransporter = () => nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  secure: Number(process.env.SMTP_PORT) === 465,
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+});
+
 const generateQrDataUrl = async (payload) => {
   // payload should be a short string or JSON
   return await QRCode.toDataURL(payload);
 };
 
 const sendMailWithQr = async (toEmail, fullName, qrDataUrl) => {
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || `no-reply@smartparking.com`;
-
-  if (!host || !port || !user || !pass) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@smartparking.com";
+  if (!isSmtpConfigured()) {
     // SMTP not configured — caller can use returned QR data instead
     return false;
   }
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port: Number(port),
-    secure: Number(port) === 465, // true for 465, false for other ports
-    auth: { user, pass },
-  });
+  const transporter = createTransporter();
 
   const html = `
     <p>Hi ${fullName},</p>
@@ -43,20 +44,10 @@ const sendMailWithQr = async (toEmail, fullName, qrDataUrl) => {
 };
 
 const sendPasswordResetOtp = async (toEmail, otp) => {
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@smartparking.com";
 
-  if (!host || !port || !user || !pass) return false;
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port: Number(port),
-    secure: Number(port) === 465,
-    auth: { user, pass },
-  });
+  if (!isSmtpConfigured()) return false;
+  const transporter = createTransporter();
 
   await transporter.sendMail({
     from,
@@ -68,30 +59,4 @@ const sendPasswordResetOtp = async (toEmail, otp) => {
   return true;
 };
 
-const sendEmailVerificationOtp = async (toEmail, otp) => {
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@smartparking.com";
-
-  if (!host || !port || !user || !pass) return false;
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port: Number(port),
-    secure: Number(port) === 465,
-    auth: { user, pass },
-  });
-
-  await transporter.sendMail({
-    from,
-    to: toEmail,
-    subject: "Verify your Smart Parking email",
-    text: `Your Smart Parking email verification OTP is ${otp}. It expires in 10 minutes.`,
-  });
-
-  return true;
-};
-
-module.exports = { generateQrDataUrl, sendMailWithQr, sendPasswordResetOtp, sendEmailVerificationOtp };
+module.exports = { generateQrDataUrl, sendMailWithQr, sendPasswordResetOtp };

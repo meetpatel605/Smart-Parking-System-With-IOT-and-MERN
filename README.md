@@ -109,6 +109,7 @@ PARKING_TIMEZONE=Asia/Kolkata
 - For Gmail, enable 2-Step Verification and create an App Password. Use that App Password
   as `SMTP_PASS`; do not use your regular Gmail password. If SMTP variables are omitted,
   forgot-password remains available in local demo mode and displays the OTP in the response.
+  Registration does not require email verification.
 
 ### Seed the database (creates admin account + demo parking slots)
 

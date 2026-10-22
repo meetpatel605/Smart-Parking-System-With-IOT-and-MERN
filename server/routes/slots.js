@@ -2,7 +2,7 @@ const express = require("express");
 const ParkingSlot = require("../models/ParkingSlot");
 const Booking = require("../models/Booking");
 const { protect, adminOnly } = require("../middleware/auth");
-const { isNonEmptyString, isValidDate, isValidTime } = require("../utils/validation");
+const { getParkingDateTimeParts, isNonEmptyString, isValidDate, isValidTime } = require("../utils/validation");
 
 const router = express.Router();
 
@@ -23,8 +23,12 @@ router.get("/available", protect, async (req, res) => {
     if (!isValidDate(date) || !isValidTime(startTime) || !isValidTime(endTime) || startTime >= endTime) {
       return res.status(400).json({ message: "date, startTime and endTime are required" });
     }
-    if (date < new Date().toISOString().slice(0, 10)) {
+    const currentParkingTime = getParkingDateTimeParts();
+    if (date < currentParkingTime.date) {
       return res.status(400).json({ message: "Booking date cannot be in the past" });
+    }
+    if (date === currentParkingTime.date && startTime < currentParkingTime.time) {
+      return res.status(400).json({ message: "Start time must be from the current time" });
     }
 
     const allSlots = await ParkingSlot.find({ isActive: true, status: { $ne: "maintenance" } });
